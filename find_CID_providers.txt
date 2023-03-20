@@ -1,0 +1,13 @@
+Write a Python script that takes a CSV with the structure `Original Link,Resolved CID` as command line argument and creates two CSV files:
+The first CSV file has these headers: `Original Link,Resolved CID,Number of Providers,List of Providers`.
+The second CSV file has these headers: `Provider ID,Number of Appearances,Reachable`.
+
+The script should run the following bash command on each CID from the input CSV: `ipfs dht findprovs <CID>`.
+This outputs several lines, each line is a string and corresponds to a provider for this CID.
+The script should process this output by counting the number of lines of this output to get the number of providers for each CID,
+as well as with the help of a Python dictionary keep track of the number of times each provider ID appears in total during the processing of the input CSV. 
+
+As a final step, the script should execute the following bash command for each provider to check if the provider is reachable: `ipfs dht findpeer <Name-of-provider>`.
+The output must contain a line that looks exactly like this: `/ip4/<IP_Address>/tcp/4001`.
+
+The script should keep track of the current progress with `tqdm`.
