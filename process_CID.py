@@ -54,13 +54,14 @@ def get_provider_information(provider):
             # print(location)
             return True, ip_address
     print(provider + ' no suitable connection possible')
+    print(output)
     return False, None
 
 # Define a function to process a single CID and return the corresponding row for output1.csv
 def process_cid(cid):
     # print(cid)
     try:
-        result = subprocess.run(f"ipfs dht findprovs {cid}", shell=True, capture_output=True, text=True, timeout=20)
+        result = subprocess.run(f"ipfs dht findprovs {cid}", shell=True, capture_output=True, text=True, timeout=15)
         output = result.stdout.strip().split("\n")
     except subprocess.TimeoutExpired as e:
         # print(f"Command timed out after {e.timeout} seconds.")

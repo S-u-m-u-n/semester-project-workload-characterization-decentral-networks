@@ -1,34 +1,66 @@
 import sys
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, unquote
 
-# Get website URL from command line argument
-url = sys.argv[1]
+def get_links_recursive(url, depth, max_depth, visited, output_file, original_domain):
+    if depth > max_depth or url in visited:
+        return
 
-# Send a request to the website and get the HTML content
-response = requests.get(url)
-soup = BeautifulSoup(response.content, 'html.parser')
+    visited.add(url)
 
-# Find all links on the website
-links = set()  # use a set to store unique links
-for link in soup.find_all('a'):
-    href = link.get('href')
-    if href is not None and '../A' in href:
-        href = href.replace('../A', '/wiki', 1)
-        # remove everything after '#' in the link
-        if '#' in href:
-            href = href[:href.index('#')]
-        full_url = urljoin(url, href).replace('https://', '', 1)
-        links.add(full_url)  # use the add() method to add unique links to the set
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+    except Exception as e:
+        print(f"Error while fetching the URL '{url}': {e}", file=sys.stderr)
+        return
+ 
+    links = set()
+    for link in soup.find_all('a'):
+        href = link.get('href')
+        # print(href)
+        if href is not None and ('../' in href or '%' in href):
+            # if depth == 1:
+                # print(href)
+            href = href.replace('../A/', '/wiki/', 1)
+            href = href.replace('../', '/wiki/', 1)
+            if '/wiki/#' in href:
+                continue
+            if '#' in href:
+                href = href[:href.index('#')]
+            full_url = urljoin(url, href)
+            # if depth == 1:
+                # print(href)
+            # if depth == 1:
+                # print(full_url)
+            link_domain = urlparse(full_url).netloc
+            if link_domain == original_domain:
+                links.add(unquote(full_url.replace('https://', '', 1)))
 
-# Extract domain name from URL
-domain = urlparse(url).netloc
-filename = f"{domain}_links.txt"
+    with open(output_file, 'a') as f:
+        for link in links:
+            f.write(link + '\n')
 
-# Write links to file
-with open(filename, 'w') as file:
     for link in links:
-        file.write(link + '\n')
+        get_links_recursive(f'https://{link}', depth + 1, max_depth, visited, output_file, original_domain)
 
-print(f"All unique links on {url} have been saved to {filename}.")
+if __name__ == "__main__":
+    # Get website URL and recursion depth from command line arguments
+    url = sys.argv[1]
+    recursion_depth = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+
+    # Extract domain name from URL
+    domain = urlparse(url).netloc
+    filename = f"{domain}_links_{recursion_depth}.txt"
+
+    # Clear or create the output file
+    with open(filename, 'w') as file:
+        pass
+
+
+    # Perform recursive link scraping
+    visited = set()
+    get_links_recursive(url, 0, recursion_depth, visited, filename, domain)
+
+    print(f"All unique links on {url} have been saved to {filename}.")

@@ -20,10 +20,13 @@ with open(output_file_name, 'w', newline='') as file:
     writer.writerow(["Original Link", "Resolved CID"])
     for link in tqdm(links, desc="Resolving links"):
         link = link.strip() # remove any whitespace characters
-        command = f"ipfs resolve -r '/ipns/{link}'"
-        output = subprocess.check_output(command, shell=True)
-        output = output.decode().strip() # decode byte string to string and remove any whitespace characters
-        output = output.replace('/ipfs/', '')
-        writer.writerow([f"{link.replace('en.wikipedia-on-ipfs.org/wiki/', '')}", output])
+        try:
+            command = f'ipfs resolve -r "/ipns/{link}"'
+            output = subprocess.check_output(command, shell=True)
+            output = output.decode().strip() # decode byte string to string and remove any whitespace characters
+            output = output.replace('/ipfs/', '')
+            writer.writerow([f"{link.replace('en.wikipedia-on-ipfs.org/wiki/', '')}", output])
+        except:
+            print(output)
 
 print(f"The resolved IPFS links have been saved to {output_file_name}.")
