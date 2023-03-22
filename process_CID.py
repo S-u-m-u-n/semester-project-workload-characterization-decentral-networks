@@ -4,6 +4,7 @@ import subprocess
 from collections import defaultdict
 from tqdm import tqdm
 import sys
+import random
 # from geoip import geolite2
 from concurrent.futures import ThreadPoolExecutor
 
@@ -22,8 +23,8 @@ date_string = now.strftime('%Y-%m-%d_%H-%M-%S')
 # print(date_string)
 
 
-output1_filename = f"./data/{input_filename.replace('_CID.csv', '')}_CID_detailed_{date_string}.csv"
-output2_filename = f"./data/{input_filename.replace('_CID.csv', '')}_CID_providers_{date_string}.csv"
+output1_filename = f"./data/{input_filename[:4]}/{input_filename.replace('_CID.csv', '')}_CID_detailed_{date_string}.csv"
+output2_filename = f"./data/{input_filename[:4]}/{input_filename.replace('_CID.csv', '')}_CID_providers_{date_string}.csv"
 
 # Create a dictionary to keep track of the number of appearances of each provider ID
 provider_counts = defaultdict(int)
@@ -42,17 +43,30 @@ def get_provider_information(provider):
         # print(f'ipfs dht findpeer {provider} returned an error.')
         return False, None
 
+    # ip_addresses = set()
+
     for line in output.splitlines():
         # match = re.match(r"/ip4/(\d+\.\d+\.\d+\.\d+)/tcp/4001", line)
-        match = re.match(r"/ip4/(\d+\.\d+\.\d+\.\d+)/tcp/([0-9]|[1-9][0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])", line)
-        
+        match = re.match(r"/ip4/((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))/tcp", line)
         if match:
             ip_address = match.group(1)
+            if ip_address not in ('127.0.0.1', '0.0.0.0'):
+                return True, ip_address
+            else:
+                # print("Weird IP")
+                # print(ip_address)
+        # else:
+            # print(line)
+            # print("No match.")
+            # return False, None
+        
+        # if match:
+            # ip_address = match.group(1)
             # print(ip_address)
             # match = geolite2.lookup(ip_address).country
             # location = match.country
             # print(location)
-            return True, ip_address
+            # return True, ip_address
     print(provider + ' no suitable connection possible')
     print(output)
     return False, None
@@ -61,11 +75,15 @@ def get_provider_information(provider):
 def process_cid(cid):
     # print(cid)
     try:
-        result = subprocess.run(f"ipfs dht findprovs {cid}", shell=True, capture_output=True, text=True, timeout=15)
+        result = subprocess.run(f"ipfs dht findprovs {cid}", shell=True, capture_output=True, text=True, timeout=20)
         output = result.stdout.strip().split("\n")
     except subprocess.TimeoutExpired as e:
         # print(f"Command timed out after {e.timeout} seconds.")
-        output = e.stdout.decode().strip().split("\n")
+        if e.stdout is not None:
+            output = e.stdout.decode().strip().split("\n")
+        else:
+            print(f'Couldn\'t find any providers for {cid}')
+            return [0, ',']
         # print(output)
     except subprocess.CalledProcessError as e:
         print(f"Command failed with return code {e.returncode}: {e.output}")
@@ -73,7 +91,12 @@ def process_cid(cid):
         print(f'Error on: ipfs dht findprovs {cid}')
         return [0, ',']
     # output = subprocess.check_output(f"ipfs dht findprovs {cid}", shell=True).decode().strip().split("\n")
-    providers = [p.split("/")[-1] for p in output]
+    filtered_output = [item for item in output if item] # remove empty strings
+    if filtered_output == []:
+        print(f'Couldn\'t find any providers for {cid}')
+        return [0, ',']
+
+    providers = [p.split("/")[-1] for p in filtered_output]
     for p in providers:
         provider_counts[p] += 1
     return [len(providers), ",".join(providers)]
@@ -87,15 +110,18 @@ def process_row(row):
 with open(input_filename, "r") as input_file, open(output1_filename, "w", newline="") as output1_file:
     # Set up the CSV reader and writer objects
     input_reader = csv.reader(input_file)
-    input_rows = list(input_reader)
-    num_rows = len(input_rows) - 1 # Subtract 1 for the header row
+    input_rows = list(input_reader)[1:]
+    # num_rows = len(input_rows)
+    # num_rows = 1024
+    num_rows = 256
+    input_rows = random.sample(input_rows, num_rows)
     output1_writer = csv.writer(output1_file)
     # Write the header row for output1.csv
     output1_writer.writerow(["Original Link", "Resolved CID", "Number of Providers", "List of Providers"])
 
     # Process CIDs in parallel
-    with ThreadPoolExecutor() as executor:
-        output_rows = list(tqdm(executor.map(process_row, input_rows[1:]), total=num_rows))
+    with ThreadPoolExecutor(max_workers=128) as executor:
+        output_rows = list(tqdm(executor.map(process_row, input_rows), total=num_rows))
 
     # Write the processed rows to output1.csv
     output1_writer.writerows(output_rows)
@@ -108,7 +134,7 @@ with open(output2_filename, "w", newline="") as output2_file:
     output2_writer.writerow(["Provider ID", "Number of Appearances", "Reachable", "IP Address"])
 
     # Process provider information in parallel
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=64) as executor:
         output2_rows = list(tqdm(executor.map(get_provider_information, provider_counts.keys()), total=len(provider_counts)))
 
     # Write the processed provider information to output2.csv
