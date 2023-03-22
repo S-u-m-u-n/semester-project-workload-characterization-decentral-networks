@@ -5,11 +5,13 @@ from collections import defaultdict
 from tqdm import tqdm
 import sys
 import random
+import os
 # from geoip import geolite2
 from concurrent.futures import ThreadPoolExecutor
 
 # Get csv file path from command line argument
-input_filename = sys.argv[1]
+input_filename = str(sys.argv[1])
+sample_size = int(sys.argv[2])
 
 # Define the input and output CSV filenames
 # input_filename = "./en.wikipedia-on-ipfs.org_CID.csv"
@@ -22,9 +24,21 @@ now = datetime.datetime.now()
 date_string = now.strftime('%Y-%m-%d_%H-%M-%S')
 # print(date_string)
 
+folder = f"./data/{input_filename[:4]}/{sample_size}"
+folder_CID = f"./data/{input_filename[:4]}/{sample_size}/CID"
+folder_Providers = f"./data/{input_filename[:4]}/{sample_size}/Providers"
 
-output1_filename = f"./data/{input_filename[:4]}/{input_filename.replace('_CID.csv', '')}_CID_detailed_{date_string}.csv"
-output2_filename = f"./data/{input_filename[:4]}/{input_filename.replace('_CID.csv', '')}_CID_providers_{date_string}.csv"
+if not os.path.exists(folder):
+    os.mkdir(folder)
+
+if not os.path.exists(folder_CID):
+    os.mkdir(folder_CID)
+
+if not os.path.exists(folder_Providers):
+    os.mkdir(folder_Providers)
+
+output1_filename = f"{folder_CID}/{date_string}.csv"
+output2_filename = f"{folder_Providers}/{date_string}.csv"
 
 # Create a dictionary to keep track of the number of appearances of each provider ID
 provider_counts = defaultdict(int)
@@ -52,7 +66,7 @@ def get_provider_information(provider):
             ip_address = match.group(1)
             if ip_address not in ('127.0.0.1', '0.0.0.0'):
                 return True, ip_address
-            else:
+            # else:
                 # print("Weird IP")
                 # print(ip_address)
         # else:
@@ -111,10 +125,12 @@ with open(input_filename, "r") as input_file, open(output1_filename, "w", newlin
     # Set up the CSV reader and writer objects
     input_reader = csv.reader(input_file)
     input_rows = list(input_reader)[1:]
-    # num_rows = len(input_rows)
-    # num_rows = 1024
-    num_rows = 256
-    input_rows = random.sample(input_rows, num_rows)
+    if sample_size == 0:
+        num_rows = len(input_rows)
+        # print(num_rows)
+    else:
+        num_rows = int(sample_size)
+        input_rows = random.sample(input_rows, num_rows)
     output1_writer = csv.writer(output1_file)
     # Write the header row for output1.csv
     output1_writer.writerow(["Original Link", "Resolved CID", "Number of Providers", "List of Providers"])

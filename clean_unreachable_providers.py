@@ -1,22 +1,7 @@
 import csv
-import datetime
 import sys
 
-def validate_timestamp(timestamp):
-    try:
-        datetime.datetime.strptime(timestamp, "%Y-%m-%d_%H-%M-%S")
-        return True
-    except ValueError:
-        return False
-
-def load_csv_files(timestamp):
-    if not validate_timestamp(timestamp):
-        print("Invalid timestamp format. Please use 'YYYY-MM-DD_hh-mm-ss'.")
-        return
-
-    providers_csv = f'./data/en.wikipedia-on-ipfs.org_CID_providers_{timestamp}.csv'
-    detailed_cid_csv = f'./data/en.wikipedia-on-ipfs.org_CID_detailed_{timestamp}.csv'
-
+def load_csv_files(providers_csv, detailed_cid_csv):
     try:
         with open(providers_csv, 'r', newline='') as file_a_obj:
             unreachable_entries = []
@@ -55,8 +40,9 @@ def load_csv_files(timestamp):
         print(f"File '{detailed_cid_csv}' not found.")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Please provide a timestamp in the format 'YYYY-MM-DD_hh_mm_ss'.")
+    if len(sys.argv) < 3:
+        print("Please provide paths to the providers and detailed CID CSV files.")
     else:
-        timestamp = sys.argv[1]
-        load_csv_files(timestamp)
+        providers_csv = sys.argv[1]
+        detailed_cid_csv = sys.argv[2]
+        load_csv_files(providers_csv, detailed_cid_csv)
