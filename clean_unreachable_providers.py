@@ -1,5 +1,9 @@
 import csv
 import sys
+import os
+import glob
+
+languages = ['en', 'ru', 'uk', 'tr', 'my', 'zh', 'fa', 'ar']
 
 def load_csv_files(providers_csv, detailed_cid_csv):
     try:
@@ -12,7 +16,7 @@ def load_csv_files(providers_csv, detailed_cid_csv):
                 if reachable.lower() == "false":
                     unreachable_entries.append(row[0])
             
-            print(unreachable_entries)
+            # print(unreachable_entries)
 
     except FileNotFoundError:
         print(f"File '{providers_csv}' not found.")
@@ -32,17 +36,37 @@ def load_csv_files(providers_csv, detailed_cid_csv):
                 updated_rows.append(row)
 
         # Write the updated rows to a new CSV file
-        with open(detailed_cid_csv + 'cleaned.csv', 'w', newline='') as updated_file_obj:
+        with open(detailed_cid_csv[:-4] + '_cleaned.csv', 'w', newline='') as updated_file_obj:
             csv_writer = csv.writer(updated_file_obj)
             csv_writer.writerows(updated_rows)
 
     except FileNotFoundError:
         print(f"File '{detailed_cid_csv}' not found.")
 
+def find_matching_files(language):
+    folder = os.path.join('./data', str(language), str(sample_size))
+    cid_path = os.path.join(folder, 'CID', '*.csv')
+    provider_path = os.path.join(folder, 'Providers', '*.csv')
+
+    cid_files = {os.path.basename(file): file for file in glob.glob(cid_path)}
+    provider_files = {os.path.basename(file): file for file in glob.glob(provider_path)}
+
+    matching_files = [(provider_files[file_name], cid_files[file_name]) for file_name in provider_files if file_name in cid_files]
+
+    return matching_files
+
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Please provide paths to the providers and detailed CID CSV files.")
+    if len(sys.argv) < 2:
+        print("Please provide the sample_size.")
     else:
-        providers_csv = sys.argv[1]
-        detailed_cid_csv = sys.argv[2]
-        load_csv_files(providers_csv, detailed_cid_csv)
+        sample_size = int(sys.argv[1])
+
+        for l in languages:
+            # print(l)
+            matching_file_pairs = find_matching_files(l)        
+            if not matching_file_pairs:
+                print(f"No matching file pairs found in {l}")
+            else:
+                for providers_csv, detailed_cid_csv in matching_file_pairs:
+                    print(f"Processing files: '{providers_csv}' and '{detailed_cid_csv}'")
+                    load_csv_files(providers_csv, detailed_cid_csv)

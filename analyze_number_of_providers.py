@@ -8,22 +8,22 @@ import sys
 
 sample_size = int(sys.argv[1])
 
-def evaluate_data(language, sample_size):
+def evaluate_data(language):
     # Read CSV files and store their data in a list of dictionaries
     data = []
     # pattern = r"^[a-z]{2}\.wikipedia-on-ipfs\.org_links_1_CID_providers_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv$"
     pattern = r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv$"
     for file in glob.glob("./data/" + str(language) + "/" + str(sample_size) + "/Providers/*.csv"):
-        print(file)
+        # print(file)
         if re.match(pattern, os.path.basename(file)):
-            print(file)
+            # print(file)
             df = pd.read_csv(file)
             timestamp = parse_timestamp(file)
             total = len(df)
             reachable = len(df[df["Reachable"] == True])
             not_reachable = total - reachable
             data.append({"timestamp": timestamp, "total": total, "reachable": reachable, "not_reachable": not_reachable})
-            print(data)
+            # print(data)
 
 
     # Sort the data by timestamp
@@ -45,14 +45,14 @@ def parse_timestamp(filename):
     timestamp_str = re.search(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv", basename).group()[:-4]
     return datetime.strptime(timestamp_str, "%Y-%m-%d_%H-%M-%S")
 
-en_timestamps, en_reachables = evaluate_data('en', sample_size)
-ru_timestamps, ru_reachables = evaluate_data('ru', sample_size)
-uk_timestamps, uk_reachables = evaluate_data('uk', sample_size)
-tr_timestamps, tr_reachables = evaluate_data('tr', sample_size)
-ar_timestamps, ar_reachables = evaluate_data('ar', sample_size)
-zh_timestamps, zh_reachables = evaluate_data('zh', sample_size)
-my_timestamps, my_reachables = evaluate_data('my', sample_size)
-fa_timestamps, fa_reachables = evaluate_data('fa', sample_size)
+en_timestamps, en_reachables = evaluate_data('en')
+ru_timestamps, ru_reachables = evaluate_data('ru')
+uk_timestamps, uk_reachables = evaluate_data('uk')
+tr_timestamps, tr_reachables = evaluate_data('tr')
+ar_timestamps, ar_reachables = evaluate_data('ar')
+zh_timestamps, zh_reachables = evaluate_data('zh')
+my_timestamps, my_reachables = evaluate_data('my')
+fa_timestamps, fa_reachables = evaluate_data('fa')
 
 # Plot the data
 plt.figure(figsize=(10, 6))

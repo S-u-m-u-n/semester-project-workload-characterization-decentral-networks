@@ -4,16 +4,19 @@ import re
 import pandas as pd
 import matplotlib.pyplot as plt
 from datetime import datetime
-# import sys
+import sys
 
+sample_size = int(sys.argv[1])
 
 def evaluate_data(language):
     # Read CSV files and store their data in a list of dictionaries
     data = []
-    pattern = r"^[a-z]{2}\.wikipedia-on-ipfs\.org_links_1\.txt_CID_detailed_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv$"
-    for file in glob.glob("./data/" + str(language) + "/" + str(language) + ".wikipedia-on-ipfs.org_links_1.txt_CID_detailed_*.csv"):
+    # pattern = r"^[a-z]{2}\.wikipedia-on-ipfs\.org_links_1_CID_providers_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv$"
+    pattern = r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_cleaned\.csv$"
+    for file in glob.glob("./data/" + str(language) + "/" + str(sample_size) + "/CID/*.csv"):
+        # print(file)
         if re.match(pattern, os.path.basename(file)):
-            # print(file)
+            print(file)
             df = pd.read_csv(file)
             timestamp = parse_timestamp(file)
             total = len(df)
@@ -28,25 +31,28 @@ def evaluate_data(language):
     timestamps = [entry["timestamp"] for entry in data]
     totals = [entry["total"] for entry in data]
     availables = [entry["available"] for entry in data]
-    availability_ratio = availables / totals
+    # availability_ratio = availables / totals
+    availability_ratios = [a / t for a, t in zip(availables, totals)]
+    [print(availability_ratios)]
     # not_reachables = [entry["not_reachable"] for entry in data]
-    return timestamps, availability_ratio
+    return timestamps, availability_ratios
 
 
 # Function to parse timestamp from filename
 def parse_timestamp(filename):
     basename = os.path.basename(filename)
-    timestamp_str = re.search(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv", basename).group()[:-4]
+    # timestamp_str = re.search(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv", basename).group()[:-4]
+    timestamp_str = re.search(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_cleaned\.csv", basename).group()[:-12]
     return datetime.strptime(timestamp_str, "%Y-%m-%d_%H-%M-%S")
 
-en_timestamps, en_reachables = evaluate_data('en')
-ru_timestamps, ru_reachables = evaluate_data('ru')
-uk_timestamps, uk_reachables = evaluate_data('uk')
-tr_timestamps, tr_reachables = evaluate_data('tr')
-ar_timestamps, ar_reachables = evaluate_data('ar')
-zh_timestamps, zh_reachables = evaluate_data('zh')
-my_timestamps, my_reachables = evaluate_data('my')
-fa_timestamps, fa_reachables = evaluate_data('fa')
+en_timestamps, en_availability_ratios = evaluate_data('en')
+ru_timestamps, ru_availability_ratios = evaluate_data('ru')
+uk_timestamps, uk_availability_ratios = evaluate_data('uk')
+tr_timestamps, tr_availability_ratios = evaluate_data('tr')
+ar_timestamps, ar_availability_ratios = evaluate_data('ar')
+zh_timestamps, zh_availability_ratios = evaluate_data('zh')
+my_timestamps, my_availability_ratios = evaluate_data('my')
+fa_timestamps, fa_availability_ratios = evaluate_data('fa')
 
 # Plot the data
 plt.figure(figsize=(10, 6))
@@ -61,10 +67,10 @@ plt.plot(fa_timestamps, fa_reachables, label="Persian", color='orange')
 # plt.plot(timestamps, reachables, label="Reachable", color='green')
 # plt.plot(timestamps, not_reachables, label="Non-reachable", color='red')
 plt.xlabel("Timestamp")
-plt.ylabel("Number of unique providers per language")
-plt.title("Development of providers over time")
+plt.ylabel("Percentage of articles that have at least one Provider")
+plt.title("CID Availability over Time")
 plt.legend()
 plt.xticks(rotation=45)
 plt.tight_layout()
-plt.savefig('unique_reachable_providers.png')
+plt.savefig(f'availability_ratios_{sample_size}.png')
 # plt.show()
