@@ -12,6 +12,8 @@ from concurrent.futures import ThreadPoolExecutor
 # Get csv file path from command line argument
 input_filename = str(sys.argv[1])
 sample_size = int(sys.argv[2])
+random_seed = int(sys.argv[3])
+random.seed(random_seed)
 
 # Define the input and output CSV filenames
 # input_filename = "./en.wikipedia-on-ipfs.org_CID.csv"
@@ -44,43 +46,37 @@ output2_filename = f"{folder_Providers}/{date_string}.csv"
 provider_counts = defaultdict(int)
 
 # Define a function to check if a provider is reachable and extract its IP address and geolocation
-def get_provider_information(provider):
+def get_provider_information(provider, max_attempts = 2):
     # print(provider)
-    # output = ''
-    try:
-        output = subprocess.check_output(f"ipfs dht findpeer {provider}", shell=True, stderr=subprocess.DEVNULL).decode()
-        # Run the command and suppress output
-        # with open(subprocess.DEVNULL, 'w') as devnull:
-            # output = subprocess.check_output(f"ipfs dht findpeer {provider}", shell=True, stderr=devnull).decode()
+    output = ''
+    for attempt in range(max_attempts):
+        try:
+            output = subprocess.check_output(f"ipfs dht findpeer {provider}", shell=True, stderr=subprocess.DEVNULL).decode()
+        except:
+            return False, None
 
-    except:
-        # print(f'ipfs dht findpeer {provider} returned an error.')
-        return False, None
-
-    # ip_addresses = set()
-
-    for line in output.splitlines():
-        # match = re.match(r"/ip4/(\d+\.\d+\.\d+\.\d+)/tcp/4001", line)
-        match = re.match(r"/ip4/((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))/tcp", line)
-        if match:
-            ip_address = match.group(1)
-            if ip_address not in ('127.0.0.1', '0.0.0.0'):
-                return True, ip_address
+        for line in output.splitlines():
+            # match = re.match(r"/ip4/(\d+\.\d+\.\d+\.\d+)/tcp/4001", line)
+            match = re.match(r"/ip4/((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))/tcp", line)
+            if match:
+                ip_address = match.group(1)
+                if ip_address not in ('127.0.0.1', '0.0.0.0'):
+                    return True, ip_address
+                # else:
+                    # print("Weird IP")
+                    # print(ip_address)
             # else:
-                # print("Weird IP")
+                # print(line)
+                # print("No match.")
+                # return False, None
+            
+            # if match:
+                # ip_address = match.group(1)
                 # print(ip_address)
-        # else:
-            # print(line)
-            # print("No match.")
-            # return False, None
-        
-        # if match:
-            # ip_address = match.group(1)
-            # print(ip_address)
-            # match = geolite2.lookup(ip_address).country
-            # location = match.country
-            # print(location)
-            # return True, ip_address
+                # match = geolite2.lookup(ip_address).country
+                # location = match.country
+                # print(location)
+                # return True, ip_address
     print(provider + ' no suitable connection possible')
     print(output)
     return False, None
@@ -96,7 +92,7 @@ def process_cid(cid):
         if e.stdout is not None:
             output = e.stdout.decode().strip().split("\n")
         else:
-            print(f'Couldn\'t find any providers for {cid}')
+            print(f'Couldn\'t find any providers for {cid} ... Timeout')
             return [0, ',']
         # print(output)
     except subprocess.CalledProcessError as e:
