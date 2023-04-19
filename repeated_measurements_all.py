@@ -30,6 +30,7 @@ def run_script(filename, sample_size, random_seed):
 
 def run_all_scripts(random_seed):
     for i in range(len(languages)):
+        print('[MAIN SCRIPT] Processing language ' + str(languages[i][0]) + ' ...')
         run_script('./' + str(languages[i][0]) + str(wikipedia_file_suffix), int(languages[i][1]), int(random_seed))
 
 if __name__ == "__main__":
@@ -47,8 +48,8 @@ if __name__ == "__main__":
     for i in range(len(languages)):
         languages[i] = (languages[i][0], count_rows_in_csv(str(languages[i][0]) + str(wikipedia_file_suffix)))
     
-    languages = sorted(languages, key=lambda x: x[1], reverse=True)
-    print(languages)
+    sorted_languages = sorted(languages, key=lambda x: x[1], reverse=True)
+    print(sorted_languages)
 
     # Extract the values and labels from the languages list
     values = [x[1] for x in languages]
@@ -76,7 +77,7 @@ if __name__ == "__main__":
     for i in range(len(languages)):
         languages[i] = (languages[i][0], int(languages[i][1] * sample_percentage))
 
-    print(languages)
+    # print(languages)
 
     try:
         while True:
@@ -87,7 +88,8 @@ if __name__ == "__main__":
 
             print(f"Iteration {current_iteration + 1} took {execution_time/60} minutes.")
             print(f"Waiting for {(interval - execution_time)/60} minutes before running the script again...")
-            time.sleep(interval - execution_time)
+            if interval - execution_time > 0:
+                time.sleep(interval - execution_time)
             current_iteration += 1
 
     except KeyboardInterrupt:
