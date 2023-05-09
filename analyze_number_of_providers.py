@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import sys
 import csv
+from matplotlib.ticker import MaxNLocator
+import matplotlib.ticker as ticker
+from matplotlib.dates import DateFormatter
 
 sample_percentage = float(sys.argv[1])
 measurement_name = str(sys.argv[2])
@@ -51,7 +54,6 @@ def evaluate_data(language, sample_size):
     # not_reachables = [entry["not_reachable"] for entry in data]
     return timestamps, reachables
 
-
 # Function to parse timestamp from filename
 def parse_timestamp(filename):
     basename = os.path.basename(filename)
@@ -67,21 +69,59 @@ languages = [('en', 'English', 'darkred'),
             ('my', 'Myanmar (Burmese)', 'teal'),
             ('fa', 'Persian (Farsi)', 'orange')]
 
-# Evaluate data and store results in a dictionary
-data = {}
+# Evaluate data and store results in two dictionaries
+full_data = {}
+sampled_data = {}
 for lang, _, _ in languages:
-    data[lang] = evaluate_data(lang, int(count_rows_in_csv(lang + str(wikipedia_file_suffix)) * sample_percentage))
+    full_data[lang] = count_rows_in_csv(lang + str(wikipedia_file_suffix))
+    sampled_data[lang] = evaluate_data(lang, int(count_rows_in_csv(lang + str(wikipedia_file_suffix)) * sample_percentage))
+
+# Sort languages by the largest entries in full_data
+sorted_languages = sorted(languages, key=lambda x: full_data[x[0]], reverse=True)
+
+# Calculate the maximum width of the text labels
+max_label_width = max([len(f"{full_data[lang],}") for lang, _, _ in sorted_languages])
+
+# Create horizontal histogram plot using full_data and sorted_languages
+# fig, ax = plt.subplots(figsize=(10, 6))
+fig, ax = plt.subplots(figsize=(10 + max_label_width * 0.6, 8))
+for i, (lang, _, color) in enumerate(sorted_languages):
+    count = full_data[lang]  # Use the last value in the 'reachables' list
+    ax.barh(i, count, color=color, alpha=0.7)
+    ax.text(count + 10, i, f"{count:,}", ha='left', va='center', fontsize=12)
+ax.set_yticks(range(len(sorted_languages)))
+ax.set_yticklabels([name for _, name, _ in sorted_languages])
+ax.invert_yaxis()
+ax.set_xlabel('Number of Articles')
+ax.set_title('Wikipedia Articles per Language')
+
+# Set the x-axis to display only integers
+ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+
+# Adjust the right margin to prevent numbers from going outside the plot
+plt.subplots_adjust(right=0.95)
+
+plt.tight_layout()
+plt.savefig(f'figures/articles_per_language.png')
+plt.clf()
+
 
 # Plot the data
 plt.figure(figsize=(10, 6))
 for lang, label, color in languages:
-    plt.plot(data[lang][0], data[lang][1], label=label, color=color)
+    plt.plot(sampled_data[lang][0], sampled_data[lang][1], label=label, color=color)
 
 plt.xlabel("Timestamp")
-plt.ylabel("Number of unique providers")
-plt.title("Unique Providers per Language")
+plt.ylabel("Number of Unique, Reachable Providers")
+plt.title("Unique Providers")
 plt.legend()
-plt.xticks(rotation=45)
+# plt.xticks(rotation=45)
+
+# Set the y-axis to have only integer labels
+ax = plt.gca()  # Get the current axis
+ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+ax.xaxis.set_major_formatter(DateFormatter('%d.%m, %H:%M'))
+
 plt.tight_layout()
 plt.savefig(f'figures/unique_reachable_providers_{sample_percentage}_{measurement_name}.png')
 # plt.show()

@@ -1,5 +1,4 @@
 import csv
-import sys
 import os
 import glob
 
@@ -30,7 +29,7 @@ def load_csv_files(providers_csv, detailed_cid_csv):
 
             for row in csv_reader_b:
                 provider_list = row[3].split(',')
-                reachable_providers = [p for p in provider_list if p not in unreachable_entries]
+                reachable_providers = [p for p in provider_list if p and p not in unreachable_entries]
                 row[3] = ','.join(reachable_providers)
                 row[2] = len(reachable_providers)
                 updated_rows.append(row)
@@ -43,8 +42,8 @@ def load_csv_files(providers_csv, detailed_cid_csv):
     except FileNotFoundError:
         print(f"File '{detailed_cid_csv}' not found.")
 
-def find_matching_files(language):
-    folder = os.path.join('./data', str(language), str(sample_size))
+def find_matching_files(language, subfolder):
+    folder = os.path.join('./data', str(language), str(subfolder))
     cid_path = os.path.join(folder, 'CID', '*.csv')
     provider_path = os.path.join(folder, 'Providers', '*.csv')
 
@@ -55,18 +54,21 @@ def find_matching_files(language):
 
     return matching_files
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Please provide the sample_size.")
-    else:
-        sample_size = int(sys.argv[1])
+def find_subfolders(language):
+    subfolders = []
+    language_folder = os.path.join('./data', str(language))
+    if os.path.isdir(language_folder):
+        subfolders = os.listdir(language_folder)
+    return subfolders
 
-        for l in languages:
-            # print(l)
-            matching_file_pairs = find_matching_files(l)        
+if __name__ == "__main__":
+    for l in languages:
+        subfolders = find_subfolders(l)
+        for subfolder in subfolders:
+            matching_file_pairs = find_matching_files(l, subfolder)
             if not matching_file_pairs:
-                print(f"No matching file pairs found in {l}")
+                print(f"No matching file pairs found in {l} for subfolder '{subfolder}'")
             else:
                 for providers_csv, detailed_cid_csv in matching_file_pairs:
-                    print(f"Processing files: '{providers_csv}' and '{detailed_cid_csv}'")
+                    # print(f"Processing files: '{providers_csv}' and '{detailed_cid_csv}'")
                     load_csv_files(providers_csv, detailed_cid_csv)
