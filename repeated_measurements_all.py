@@ -63,7 +63,7 @@ if __name__ == "__main__":
     random_seed = args.random_seed
 
     for i in range(len(languages)):
-        languages[i] = (languages[i][0], int(count_rows_in_csv(str(languages[i][0]) + str(wikipedia_file_suffix)) * sample_percentage))
+        languages[i] = (languages[i][0], int(count_rows_in_csv(f"./links/{languages[i][0]}{wikipedia_file_suffix}") * sample_percentage))
     
     if not is_ipfs_daemon_running():
         print("IPFS daemon is not running. Starting it now...")

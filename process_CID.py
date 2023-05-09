@@ -152,7 +152,7 @@ def process_row(row, max_attempts=2):
     return [original_link, resolved_cid, website_reachable, 0, '', 0]
 
 # Open the input CSV file and create the output1 CSV file
-with open(input_filename, "r") as input_file, open(output1_filename, "w", newline="") as output1_file:
+with open(f"./links/{input_filename}", "r") as input_file, open(output1_filename, "w", newline="") as output1_file:
     # Set up the CSV reader and writer objects
     input_reader = csv.reader(input_file)
     input_rows = list(input_reader)[1:]
